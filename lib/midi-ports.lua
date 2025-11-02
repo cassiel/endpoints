@@ -1,8 +1,10 @@
 --[[
     Support for MIDI ports from script's parameter setup
     (rather than using indices and the global port list).
-    The script will provide device "role" keys x names
-    (such as "Grid input", "To DAW").
+    The script is expected to provide device "role" keys x names
+    (such as "grid" x "Grid input", "daw" x "To DAW" -
+    or device identifiers like "wavestate", "modwave" which
+    make sense to the script).
     
     Argument: table of:
         key: name * (msg callback)
@@ -13,15 +15,11 @@
     And: parameters registered in PARAMETERS page.
 ]]
 
-local G = require "printer-jam-norns.lib.global"
-local spectra = require "printer-jam-norns.lib.spectra"
-local visuals = require "printer-jam-norns.lib.visuals"
-
 local function setup_midi(callback_tab)
     --[[
-        Set up MIDI endpoints via virtual ports (so the devices
-        here might not actually be connected, and/or a script
-        reload might be needed).
+        Set up MIDI endpoints via virtual ports. We're building a map
+        from application keys to virtual port indices; it's possible
+        to swap other devices into this ports after the fact.
     ]]
 
     -- Arrays indexed by vport:
@@ -29,9 +27,19 @@ local function setup_midi(callback_tab)
     local names = { }
 
     for i = 1, #midi.vports do
+        --[[
+            The connection here is to the device endpoint, unrelated
+            to the index i. The device can be reattached to another
+            vport and will still work at its different index. Devices
+            not connected at this time won't show up later.
+        ]]
         devices[i] = midi.connect(i)
-        -- The trim is mainly for the parameter page. (Perhaps we should
-        -- have a second table with longer names for the script page.)
+        --[[
+            The trim is mainly for the parameter page. (Perhaps we should
+            have a second table with longer names for the script page.)
+            The names don't update if system device assignments change:
+            the script will need to be reloaded.
+        ]]
         table.insert(
             names,
             "port "..i..": "..util.trim_string_to_width(devices[i].name, 40)
@@ -42,6 +50,9 @@ local function setup_midi(callback_tab)
             -- handlers it goes to:
             function (x)
                 print("PORT [" .. i .. "]")
+                -- This is a filter: we see input from all active ports,
+                -- but have to select according to our param. We're doing
+                -- it by index, not actual device:
                 if i == G.midi.mf_target then
                     local msg = midi.to_msg(x)
                     -- callbacks.process_note(msg.note, (msg.type == "note_on"))
@@ -67,7 +78,6 @@ local function setup_midi(callback_tab)
 end
 
 local function setup(header, callbacks)
-    tab.print(callbacks)
     params:add_separator(header)
     setup_midi(callbacks)
 end

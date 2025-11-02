@@ -1,0 +1,5 @@
+-- ## endpoints
+-- Utility for presenting MIDI,
+-- grid and arc endpoints as params.
+--
+-- Nick Rothwell, nick@cassiel.com.

@@ -1,3 +1,5 @@
+-- -*- lua-indent-level: 4; -*-
+
 --[[
     Support for MIDI ports from script's parameter setup
     (rather than using indices and the global port list).
@@ -5,26 +7,30 @@
     (such as "grid" x "Grid input", "daw" x "To DAW" -
     or device identifiers like "wavestate", "modwave" which
     make sense to the script).
-    
+
     Argument: table of:
-        key: name * (msg callback)
-    
+        key -> name * (msg callback)
+
     Result returned: table of:
-        key: (MIDI endpoint, for transmission)
-        
-    And: parameters registered in PARAMETERS page.
+        key -> (MIDI endpoint index, for transmission)
+        NB: this returned table is mutable, if params change!
+
+    Side-effect: parameters registered in PARAMETERS page.
 ]]
 
-local function setup_midi(callback_tab)
+local function setup_midi(callbacks)
     --[[
         Set up MIDI endpoints via virtual ports. We're building a map
         from application keys to virtual port indices; it's possible
         to swap other devices into this ports after the fact.
     ]]
 
+    -- Result: map from keys to vport indices (mutable!):
+    local keys_to_ids = { }
+
     -- Arrays indexed by vport:
     local devices = { }
-    local names = { }
+    local vnames = { }
 
     for i = 1, #midi.vports do
         --[[
@@ -41,40 +47,46 @@ local function setup_midi(callback_tab)
             the script will need to be reloaded.
         ]]
         table.insert(
-            names,
+            vnames,
             "port "..i..": "..util.trim_string_to_width(devices[i].name, 40)
         )
 
+        --[[
+            Event handling: given an id, callback if a key maps to that id.
+            Fiddly because we might have the same id as a target for multiple
+            ids (especially when manually configuring the script) so we
+            can't just maintain a reverse table. We do it the icky way and
+            iterate through the original.
+        ]]
         devices[i].event =
-            -- Event is in: work out which of our app-level
-            -- handlers it goes to:
             function (x)
                 print("PORT [" .. i .. "]")
                 -- This is a filter: we see input from all active ports,
                 -- but have to select according to our param. We're doing
                 -- it by index, not actual device:
-                if i == G.midi.mf_target then
-                    local msg = midi.to_msg(x)
-                    -- callbacks.process_note(msg.note, (msg.type == "note_on"))
-                    callbacks.process_note(msg.note, ((msg.type == "note_on") and 127 or 0), msg.ch)
+                for key, id in pairs(keys_to_ids) do
+                    if i == id then
+                        callbacks[key].event(x)
+                    end
                 end
-
-                tab.print(midi.to_msg(x))
             end
     end
 
-    params:add_option("mf", "MIDI Fighter", names, 1)
-    params:set_action("mf", function(x) G.midi.mf_target = x end)
+    local count = 1
+    for k, v in pairs(callbacks) do
+        keys_to_ids[k] = count
+        ids_to_keys[count] = k
+        params:add_option(k, v.name, vnames, count)
+        params:set_action(
+            k,
+            function(n)
+                keys_to_ids[k] = n
+            end
+        )
+        count = count + 1
+    end
 
-    params:add_option("daw", "DAW", names, 2)
-    params:set_action("daw", function(x) G.midi.daw_target = x end)
-
-    G.midi = {
-        devices = devices,
-        names = names,
-        mf_target = 1,          -- Hope that fires before the param callback?
-        daw_target = 2
-    }
+    return keys_to_ids
 end
 
 local function setup(header, callbacks)

@@ -1,0 +1,4 @@
+;; TODO: did we ever have Babashka working on norns?
+
+{:tasks {test {:doc "Run tests (from parent directory)"
+               :task (shell {:dir ".."} "lua endpoints/lib/test-all.lua")}}}

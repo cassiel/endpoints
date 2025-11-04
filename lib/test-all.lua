@@ -2,6 +2,7 @@
 -- Unit testing.
 
 local lu = require "luaunit"
+local inspect = require "inspect"
 
 local midi_ports = require "endpoints.lib.midi-ports"
 
@@ -18,16 +19,16 @@ test_Endpoint = { }
 function test_Endpoint:setUp()
     self.log = { }
     local log = self.log
-    
+
     midi = { }
     midi.vports = { "FOO" }
 
     function midi.connect(i)
         return {name="MyName_" .. i}
     end
-    
+
     util = { }
-    
+
     function util.trim_string_to_width(str, w)
         lu.assertNotNil(str)
         return str
@@ -35,8 +36,17 @@ function test_Endpoint:setUp()
 
     params = { }
 
+    -- TODO: in the docs this is id * label.
     function params:add_separator(header)
         table.insert(log, "SEP " .. header)
+    end
+
+    function params:add_option(id, name, options, default)
+        table.insert(log, "OPT " .. id .. " " .. name .. " " .. inspect.inspect(options) .. " " .. default)
+    end
+
+    function params:set_action(id, callback)
+        table.insert(log, "ACTION " .. id)
     end
 end
 
@@ -44,7 +54,7 @@ function test_Endpoint:tearDown()
 end
 
 function test_Endpoint:testGo()
-    midi_ports.setup("TestApp", {
+    local result = midi_ports.setup("TestApp", {
         port_a = {
             name="Port A",
             event=function(x)
@@ -54,12 +64,13 @@ function test_Endpoint:testGo()
         port_b = {
             name="Port B",
             event=function(x)
-                table.insert(self.log, "EV_A")
+                table.insert(self.log, "EV_B")
             end
         }
     })
 
-    lu.assertEquals(self.log, {A=19})
+    lu.assertEquals(self.log, {"BLAH"})
+    lu.assertEquals(result, {port_a=1, port_b=2})
 end
 
 runner = lu.LuaUnit.new()

@@ -1,6 +1,7 @@
 -- ## endpoints
 -- Utility for presenting MIDI,
--- grid and arc endpoints as params.
+-- grid and arc endpoints as
+-- params.
 -- (MIDI only at present.)
 --
 -- Nick Rothwell, nick@cassiel.com.
@@ -15,6 +16,7 @@ for k, _ in pairs(package.loaded) do
 end
 
 local midi_ports = require "endpoints.lib.midi-ports"
+local endpoints = nil
 
 function init()
     --[[
@@ -27,20 +29,30 @@ function init()
     local callbacks = {
         keys={
             name="Keys in",
-            event=function(x) print("keys:"); tab.print(x) end 
+            event=function(x) print("keys:"); tab.print(x) end
         },
         pads={
             name="Pads in",
-            event=function(x) print("pads:"); tab.print(x) end 
+            event=function(x) print("pads:"); tab.print(x) end
         },
         knobs={
             name="Knobs in",
-            event=function(x) print("knobs:"); tab.print(x) end 
+            event=function(x) print("knobs:"); tab.print(x) end
         },
     }
 
-    midi_ports.setup("Endpoints", callbacks)
+    endpoints = midi_ports.setup("Endpoints", callbacks)
 end
 
 function redraw()
+    screen.clear()
+    
+    local y = 10
+    
+    for k, v in pairs(endpoints) do
+        screen.move(10, y)
+        screen.text(k .. ": " .. v.name)
+    end
+    
+    screen.update()
 end

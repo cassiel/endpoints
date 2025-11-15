@@ -26,11 +26,7 @@ local leds_on = { }
 
 local function led_level(key)
     -- print("leds_on[" .. key .. "] = " .. (leds_on[key] and "T" or "F"))
-    if leds_on[key] then
-        return 15
-    else
-        return 1
-    end
+    return (leds_on[key] and 15 or 1)
 end
 
 local coroutine_ids = { }
@@ -42,33 +38,32 @@ local function fire_led(key)
     -- Kill any existing "off"-timer:
     local cr = coroutine_ids[key]
     if cr then clock.cancel(cr) end
-    
+
     -- Timer for the "off":
     coroutine_ids[key] = clock.run(
         function()
             leds_on[key] = true
+            redraw()
             clock.sleep(0.1)
             leds_on[key] = false
             redraw()
         end
     )
-    
-    redraw()
 end
 
 local config = {
-        keys={
-            name="Keys in",
-            event=function(x) print("keys:"); tab.print(x); fire_led("keys") end
-        },
-        pads={
-            name="Pads in",
-            event=function(x) print("pads:"); tab.print(x); fire_led("pads") end
-        },
-        knobs={
-            name="Knobs in",
-            event=function(x) print("knobs:"); tab.print(x); fire_led("knobs") end
-        }
+    keys={
+        name="Keys in",
+        event=function(x) print("keys:"); tab.print(x); fire_led("keys") end
+    },
+    pads={
+        name="Pads in",
+        event=function(x) print("pads:"); tab.print(x); fire_led("pads") end
+    },
+    knobs={
+        name="Knobs in",
+        event=function(x) print("knobs:"); tab.print(x); fire_led("knobs") end
+    }
 }
 
 function init()
@@ -106,14 +101,14 @@ function redraw()
             screen.level(led_level(k))
             screen.rect(3, y - 5, 4, 13)
             screen.fill()
-            
+
             local id =  endpoints._ids[k]
             screen.level(3)
             screen.move(10, y)
             screen.text(config[k].name)
             -- print(">>> " .. config[k].name .. ": " .. v.name .. " [" .. id .. "]")
             y = y + 8
-            
+
             screen.move(10, y)
             screen.level(5)
             screen.text("[" .. id .. "]")
@@ -121,7 +116,6 @@ function redraw()
             screen.level(15)
             screen.text(v.name)
             y = y + 12
-            
         end
     end
 

@@ -15,7 +15,7 @@ for k, _ in pairs(package.loaded) do
     end
 end
 
-local midi_ports = require "endpoints.lib.midi-ports"
+local ports = require "endpoints.lib.endpoints"
 local endpoints = nil
 
 function init()
@@ -41,18 +41,18 @@ function init()
         },
     }
 
-    endpoints = midi_ports.setup("Endpoints", callbacks)
+    endpoints = ports.setup_midi("Endpoints", callbacks)
 end
 
 function redraw()
     screen.clear()
-    
+
     local y = 10
-    
+
     for k, v in pairs(endpoints) do
         screen.move(10, y)
         screen.text(k .. ": " .. v.name)
     end
-    
+
     screen.update()
 end

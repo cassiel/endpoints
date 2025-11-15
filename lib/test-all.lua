@@ -4,7 +4,7 @@
 local lu = require "luaunit"
 local inspect = require "inspect"
 
-local midi_ports = require "endpoints.lib.midi-ports"
+local ports = require "endpoints.lib.endpoints"
 
 test_Start = { }
 
@@ -74,7 +74,7 @@ function test_Endpoint:tearDown()
 end
 
 function test_Endpoint:testSetup()
-    local result = midi_ports.setup("TestApp", {
+    local result = ports.setup_midi("TestApp", {
         port_a = {
             name="Port A",
             event=function(x)
@@ -115,7 +115,7 @@ function test_Endpoint:testSetup()
 end
 
 function test_Endpoint:testParamChange()
-    local result = midi_ports.setup("TestApp", {
+    local result = ports.setup_midi("TestApp", {
                                         port_a = {
                                             name="Port A",
                                             event=function(x)
@@ -131,7 +131,7 @@ function test_Endpoint:testParamChange()
 end
 
 function test_Endpoint:testEvent()
-    midi_ports.setup("TestApp", {
+    ports.setup_midi("TestApp", {
                          port_a = {
                              name="Port A",
                              event=function(x)
@@ -158,7 +158,7 @@ function test_Endpoint:testEvent()
 end
 
 function test_Endpoint:testTransmitNoParamChange()
-    m = midi_ports.setup(
+    m = ports.setup_midi(
         "TestApp",
         {
             port_a = {
@@ -186,7 +186,7 @@ function test_Endpoint:testTransmitNoParamChange()
 end
 
 function test_Endpoint:testTransmitWithParamChange()
-    m = midi_ports.setup(
+    m = ports.setup_midi(
         "TestApp",
         {
             port_a = {

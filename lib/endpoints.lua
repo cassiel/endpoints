@@ -118,5 +118,5 @@ local function setup(header, callbacks)
 end
 
 return {
-    setup = setup
+    setup_midi = setup
 }

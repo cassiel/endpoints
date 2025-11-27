@@ -2,7 +2,7 @@
 -- Utility for presenting MIDI,
 -- grid and arc endpoints as
 -- params.
--- (MIDI only at present.)
+-- Enc 1 = page (MIDI/Grids/Arcs).
 --
 -- Nick Rothwell, nick@cassiel.com.
 
@@ -16,7 +16,11 @@ for k, _ in pairs(package.loaded) do
 end
 
 local ports = require "endpoints.lib.endpoints"
+local UI = require "ui"
 local endpoints = nil
+
+local pageNames = {"MIDI", "Grids", "Arcs"}
+local pages = UI.Pages.new(1, #pageNames)
 
 --[[
     A table which specifies which activity "LEDs"
@@ -87,36 +91,54 @@ local function sorted_keys(t)
     return result
 end
 
+--[[
+    We only do encoder 1, and only for page selection.
+]]
+
+function enc(n, d)
+    if n == 1 then
+        pages:set_index_delta(d, false)
+        redraw()
+    end
+end
+
 function redraw()
     screen.clear()
+    pages:redraw()
+    local title = pageNames[pages.index]
+    screen.move(128, 5)
+    screen.level(15)
+    screen.text_right(title)
 
-    local y = 10
-
-    --[[
-        Let's sort the keys, mainly for consistency. We're showing
-        the long names, which themselves might not be in order.
-    ]]
-    for i, k in ipairs(sorted_keys(endpoints)) do
-        local v = endpoints[k]
-        if not k:find("_", 1, true) then
-            screen.level(led_level(k))
-            screen.rect(3, y - 5, 4, 13)
-            screen.fill()
-
-            local id =  endpoints._ids[k]
-            screen.level(3)
-            screen.move(10, y)
-            screen.text(config[k].name)
-            -- print(">>> " .. config[k].name .. ": " .. v.name .. " [" .. id .. "]")
-            y = y + 8
-
-            screen.move(10, y)
-            screen.level(5)
-            screen.text("[" .. id .. "]")
-            screen.move(25, y)
-            screen.level(15)
-            screen.text(v.name)
-            y = y + 12
+    if pages.index == 1 then
+        local y = 15
+    
+        --[[
+            Let's sort the keys, mainly for consistency. We're showing
+            the long names, which themselves might not be in order.
+        ]]
+        for i, k in ipairs(sorted_keys(endpoints)) do
+            local v = endpoints[k]
+            if not k:find("_", 1, true) then
+                screen.level(led_level(k))
+                screen.rect(3, y - 5, 4, 13)
+                screen.fill()
+    
+                local id =  endpoints._ids[k]
+                screen.level(3)
+                screen.move(10, y)
+                screen.text(config[k].name)
+                -- print(">>> " .. config[k].name .. ": " .. v.name .. " [" .. id .. "]")
+                y = y + 8
+    
+                screen.move(10, y)
+                screen.level(5)
+                screen.text("[" .. id .. "]")
+                screen.move(25, y)
+                screen.level(15)
+                screen.text(v.name)
+                y = y + 12
+            end
         end
     end
 

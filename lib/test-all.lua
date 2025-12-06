@@ -213,6 +213,41 @@ function test_Endpoint:testTransmitWithParamChange()
             "midi.send {7, 8, 9}"
         }
     )
+end
+
+test_ArcGroup = { }
+
+function test_ArcGroup:setUp()
+
+end
+
+function test_ArcGroup:tearDown()
+end
+
+function test_ArcGroup:testSetup()
+    local result = ports.setup_arcs(
+        "ArcApp",
+        {
+            arc_port = {
+                name="Arc 4",
+                key=function (n, z)
+                    table.insert(self.log, "key n=" .. n .. " z=" .. z)
+                end,
+                delta=function (n, d)
+                    table.insert(self.log, "key n=" .. n .. " d=" .. d)
+                end
+            }
+    })
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator ArcApp [arcs]",
+            'add_option arc_port Arc 4 { "port 1: arc.connected(1)" } 1',
+            "set_action arc_port"
+        }
+    )
+    lu.assertEquals(result._ids, {arc_port=1})
 
 end
 

@@ -1,11 +1,11 @@
 -- -*- lua-indent-level: 4; -*-
 
 --[[
-    Support for MIDI ports from script's parameter setup
+    Support for MIDI, grid and arc ports from script's parameter setup
     (rather than using indices and the global port list).
     The script is expected to provide device "role" keys x names
     (such as "grid" x "Grid input", "daw" x "To DAW" -
-    or device identifiers like "wavestate", "modwave" which
+    or device keys like "wavestate", "modwave" which
     make sense to the script).
 
     Argument: table of:
@@ -18,7 +18,16 @@
     Side-effect: parameters registered in PARAMETERS page.
 ]]
 
-local function setup_midi(callbacks)
+--[[
+    We support MIDI devices, grids and arcs as three configurations,
+    but functionally these differ only in the name of the built-in
+    table of virtual devices, and the names of the callbacks.
+
+    dev_table: "midi", "grid", "arc".
+    callback_fns: ["event"], ["key"], ["key, "delta"].
+]]
+
+local function setup_devices(dev_table, callback_fns, callbacks)
     --[[
         Set up MIDI endpoints via virtual ports. We're building a map
         from application keys to virtual port indices; it's possible
@@ -41,13 +50,13 @@ local function setup_midi(callbacks)
     local devices = { }
     local vnames = { }
 
-    for i = 1, #midi.vports do
+    for i = 1, #dev_table.vports do
         --[[
-            The result of midi.connect() still seems to be related to
+            The result of [midi/grid/arc].connect() still seems to be related to
             virtual slot: swap in a different "device" in system settings
             and that new device kicks in.
         ]]
-        devices[i] = midi.connect(i)
+        devices[i] = dev_table.connect(i)
 
         --[[
             The trim is mainly for the parameter page. (Perhaps we should
@@ -66,21 +75,26 @@ local function setup_midi(callbacks)
             keys (especially when manually configuring the script) so we
             can't just maintain a reverse table. We do it by iterating
             through the original.
+
+            Depending on the type of device we're configuring (midi/grid/arc)
+            the callback field is different. Arcs have two callbacks.
         ]]
-        devices[i].event =
-            function (x)
-                -- print("PORT [" .. i .. "]")
-                --[[
-                    This is a filter: we see input from all active ports,
-                    but have to select according to our param. We may
-                    get multiple matches.
-                ]]
-                for key, id in pairs(keys_to_ids) do
-                    if i == id then
-                        callbacks[key].event(x)
+        for _, cb_name in ipairs(callback_fns) do
+            devices[i][cb_name] =
+                function (x)
+                    -- print("PORT [" .. i .. "]")
+                    --[[
+                        This is a filter: we see input from all active ports,
+                        but have to select according to our param. We may
+                        get multiple matches.
+                    ]]
+                    for key, id in pairs(keys_to_ids) do
+                        if i == id then
+                            callbacks[key][cb_name](x)
+                        end
                     end
                 end
-            end
+        end
     end
 
     --[[
@@ -112,11 +126,15 @@ local function setup_midi(callbacks)
     return keys_to_devices
 end
 
-local function setup(header, callbacks)
+local function setup(header, dev_table, callback_fns, callbacks)
     params:add_separator(header)
-    return setup_midi(callbacks)
+    -- return setup_midi(callbacks)
+    return setup_devices(midi, {"event"}, callbacks)
 end
 
 return {
-    setup_midi = setup
+    setup_midi =
+        function (header, callbacks)
+            return setup(header .. " [MIDI]", midi, {"event"}, callbacks)
+        end
 }

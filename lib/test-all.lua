@@ -102,7 +102,7 @@ function test_Endpoint:testSetup()
     lu.assertEquals(
         self.log,
         {
-            "add_separator TestApp",
+            "add_separator TestApp [MIDI]",
             'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
             "set_action port_a",
             'add_option port_b Port B { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 2',
@@ -149,7 +149,7 @@ function test_Endpoint:testEvent()
     lu.assertEquals(
         self.log,
         {
-            "add_separator TestApp",
+            "add_separator TestApp [MIDI]",
             'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
             "set_action port_a",
             "event.A: MIDI-IN"
@@ -176,7 +176,7 @@ function test_Endpoint:testTransmitNoParamChange()
     lu.assertEquals(
         self.log,
         {
-            "add_separator TestApp",
+            "add_separator TestApp [MIDI]",
             'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
             "set_action port_a",
             "midi.send {7, 8, 9}"
@@ -207,7 +207,7 @@ function test_Endpoint:testTransmitWithParamChange()
     lu.assertEquals(
         self.log,
         {
-            "add_separator TestApp",
+            "add_separator TestApp [MIDI]",
             'add_option port_a Port A { "port 1: midi.connected(1)", "port 2: midi.connected(2)", "port 3: midi.connected(3)" } 1',
             "set_action port_a",
             "midi.send {7, 8, 9}"

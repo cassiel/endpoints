@@ -81,7 +81,11 @@ local function setup_devices(dev_table, callback_fns, callbacks)
         ]]
         for _, cb_name in ipairs(callback_fns) do
             devices[i][cb_name] =
-                function (x)
+                --[[
+                    Is there a better way of doing varargs? Grid/arc callbacks
+                    take two arguments.
+                ]]
+                function (a, b) -- !!!!!!! varargs!
                     -- print("PORT [" .. i .. "]")
                     --[[
                         This is a filter: we see input from all active ports,
@@ -90,7 +94,9 @@ local function setup_devices(dev_table, callback_fns, callbacks)
                     ]]
                     for key, id in pairs(keys_to_ids) do
                         if i == id then
-                            callbacks[key][cb_name](x)
+                            local f = callbacks[key][cb_name]
+                            -- Ignore if we've not provided a callback:
+                            if f then f(a, b) end
                         end
                     end
                 end
@@ -129,12 +135,20 @@ end
 local function setup(header, dev_table, callback_fns, callbacks)
     params:add_separator(header)
     -- return setup_midi(callbacks)
-    return setup_devices(midi, {"event"}, callbacks)
+    return setup_devices(dev_table, callback_fns, callbacks)
 end
 
 return {
     setup_midi =
         function (header, callbacks)
             return setup(header .. " [MIDI]", midi, {"event"}, callbacks)
+        end,
+    setup_grids =
+        function (header, callbacks)
+            return setup(header .. " [grids]", grid, {"key"}, callbacks)
+        end,
+    setup_arcs =
+        function (header, callbacks)
+            return setup(header .. " [arcs]", arc, {"key", "delta"}, callbacks)
         end
 }

@@ -218,7 +218,52 @@ end
 test_ArcGroup = { }
 
 function test_ArcGroup:setUp()
+    self.log = { }
+    local log = self.log
 
+    --[[
+        Similar to MIDI.
+    ]]
+    arc = { }
+
+    arc.vports = { "...", "..." }
+    arc.devices = { }
+
+    function arc.connect(i)
+        arc.devices[i] =
+            arc.devices[i] or {
+                name="arc.connected(" .. i .. ")",
+                led=function (ring, x, val)
+                    table.insert(log, "arc.led {r=" .. ring .. " x=" .. x .. " v=" .. val .. "}")
+                end
+            }
+        return arc.devices[i]
+    end
+
+    util = { }
+
+    function util.trim_string_to_width(str, w)
+        lu.assertNotNil(str)
+        return str
+    end
+
+    params = { }
+
+    -- TODO: in the docs this is id * label.
+    function params:add_separator(header)
+        table.insert(log, "add_separator " .. header)
+    end
+
+    function params:add_option(id, name, options, default)
+        table.insert(log, "add_option " .. id .. " " .. name .. " " .. inspect.inspect(options) .. " " .. default)
+    end
+
+    function params:set_action(id, callback)
+        table.insert(log, "set_action " .. id)
+
+        self.actions = self.actions or { }
+        self.actions[id] = callback
+    end
 end
 
 function test_ArcGroup:tearDown()
@@ -243,12 +288,59 @@ function test_ArcGroup:testSetup()
         self.log,
         {
             "add_separator ArcApp [arcs]",
-            'add_option arc_port Arc 4 { "port 1: arc.connected(1)" } 1',
+            'add_option arc_port Arc 4 { "port 1: arc.connected(1)", "port 2: arc.connected(2)" } 1',
             "set_action arc_port"
         }
     )
     lu.assertEquals(result._ids, {arc_port=1})
+end
 
+function test_ArcGroup:testTransmitToArc()
+    local result = ports.setup_arcs(
+        "ArcApp",
+        {
+            arc_port = {name="Arc 4"}
+        }
+    )
+
+    result.arc_port.led(1, 20, 15)
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator ArcApp [arcs]",
+            'add_option arc_port Arc 4 { "port 1: arc.connected(1)", "port 2: arc.connected(2)" } 1',
+            "set_action arc_port",
+            "arc.led {r=1 x=20 v=15}"
+        }
+    )
+end
+
+function test_ArcGroup:testReceiveFromArc()
+    local result = ports.setup_arcs(
+        "ArcApp",
+        {
+            arc_port = {
+                name="Arc 4",
+                delta=function (n, d)
+                    table.insert(self.log, "arc callback n=" .. n .. " d=" .. d)
+                end
+            }
+        }
+    )
+
+    arc.devices[1].key(1, 1)    -- Should be ignored - no callback.
+    arc.devices[1].delta(1, 5)
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator ArcApp [arcs]",
+            'add_option arc_port Arc 4 { "port 1: arc.connected(1)", "port 2: arc.connected(2)" } 1',
+            "set_action arc_port",
+            "arc callback n=1 d=5"
+        }
+    )
 end
 
 runner = lu.LuaUnit.new()

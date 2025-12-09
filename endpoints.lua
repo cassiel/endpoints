@@ -17,15 +17,20 @@ end
 
 local ports = require "endpoints.lib.endpoints"
 local UI = require "ui"
-local endpoints = nil
+
+-- endpoints will eventually be {midi=xxx, arcs=xxx, grids=xxx}
+local endpoints = { }
 
 local pageNames = {"MIDI", "Grids", "Arcs"}
 local pages = UI.Pages.new(1, #pageNames)
+local devGroupNames = {"midi", "grids", "arcs"}     -- See calls in init().
 
 --[[
     A table which specifies which activity "LEDs"
-    are on because of MIDI input. No entry == off.
+    are on because of device input. No entry == off.
+    These are across all display pages.
 ]]
+
 local leds_on = { }
 
 local function led_level(key)
@@ -37,7 +42,10 @@ local coroutine_ids = { }
 
 --[[
     "Fire" an LED: turn it on for a fraction of a second.
+    (It might be an LED that's not on the current page,
+    but we redraw anyway.)
 ]]
+
 local function fire_led(key)
     -- Kill any existing "off"-timer:
     local cr = coroutine_ids[key]
@@ -56,18 +64,31 @@ local function fire_led(key)
 end
 
 local config = {
-    keys={
-        name="Keyboard",
-        event=function(_) fire_led("keys") end
+    midi={
+        keys={
+            name="Keyboard",
+            event=function(_) fire_led("keys") end
+        },
+        pads={
+            name="Drum Pads",
+            event=function(_) fire_led("pads") end
+        },
+        knobs={
+            name="Controller Box",
+            event=function(_) fire_led("knobs") end
+        }
     },
-    pads={
-        name="Drum Pads",
-        event=function(_) fire_led("pads") end
+    grids={
+        gs={
+            name="Greyscale 64",
+            key=function (_, _) fire_led("gs") end
+        },
+        m128={
+            name="Grid 128",
+            key=function (_, _) fire_led("m128") end
+        }
     },
-    knobs={
-        name="Controller Box",
-        event=function(_) fire_led("knobs") end
-    }
+    arcs={ }
 }
 
 function init()
@@ -78,7 +99,10 @@ function init()
         yet sending anything in this demo).
     ]]
 
-    endpoints = ports.setup_midi("Endpoints", config)
+    endpoints.midi = ports.setup_midi("Endpoints", config.midi)
+    endpoints.grids = ports.setup_grids("Endpoints", config.grids)
+    endpoints.arcs = ports.setup_grids("Endpoints", config.arcs)
+
     params:default()        --  Recall default setup.
 end
 
@@ -109,36 +133,37 @@ function redraw()
     screen.move(128, 5)
     screen.level(15)
     screen.text_right(title)
+    
+    local groupName = devGroupNames[pages.index]
 
-    if pages.index == 1 then
-        local y = 15
-    
-        --[[
-            Let's sort the keys, mainly for consistency. We're showing
-            the long names, which themselves might not be in order.
-        ]]
-        for i, k in ipairs(sorted_keys(endpoints)) do
-            local v = endpoints[k]
-            if not k:find("_", 1, true) then
-                screen.level(led_level(k))
-                screen.rect(3, y - 5, 4, 13)
-                screen.fill()
-    
-                local id =  endpoints._ids[k]
-                screen.level(3)
-                screen.move(10, y)
-                screen.text(config[k].name)
-                -- print(">>> " .. config[k].name .. ": " .. v.name .. " [" .. id .. "]")
-                y = y + 8
-    
-                screen.move(10, y)
-                screen.level(5)
-                screen.text("[" .. id .. "]")
-                screen.move(25, y)
-                screen.level(15)
-                screen.text(v.name)
-                y = y + 12
-            end
+    local y = 15
+
+    --[[
+        Let's sort the keys, mainly for consistency. We're showing
+        the long names, which themselves might not be in order.
+    ]]
+
+    for i, k in ipairs(sorted_keys(endpoints[groupName])) do
+        local v = endpoints[groupName][k]
+        if not k:find("_", 1, true) then
+            screen.level(led_level(k))
+            screen.rect(3, y - 5, 4, 13)
+            screen.fill()
+
+            local id =  endpoints[groupName]._ids[k]
+            screen.level(3)
+            screen.move(10, y)
+            screen.text(config[groupName][k].name)
+            -- print(">>> " .. config.midi[k].name .. ": " .. v.name .. " [" .. id .. "]")
+            y = y + 8
+
+            screen.move(10, y)
+            screen.level(5)
+            screen.text("[" .. id .. "]")
+            screen.move(25, y)
+            screen.level(15)
+            screen.text(v.name)
+            y = y + 12
         end
     end
 

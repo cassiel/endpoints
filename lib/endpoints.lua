@@ -85,7 +85,7 @@ local function setup_devices(dev_table, callback_fns, callbacks)
                     Is there a better way of doing varargs? Grid/arc callbacks
                     take two arguments.
                 ]]
-                function (a, b) -- !!!!!!! varargs!
+                function (a, b, c) -- !!!!!!! varargs!
                     -- print("PORT [" .. i .. "]")
                     --[[
                         This is a filter: we see input from all active ports,
@@ -96,7 +96,7 @@ local function setup_devices(dev_table, callback_fns, callbacks)
                         if i == id then
                             local f = callbacks[key][cb_name]
                             -- Ignore if we've not provided a callback:
-                            if f then f(a, b) end
+                            if f then f(a, b, c) end
                         end
                     end
                 end

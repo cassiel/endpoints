@@ -37,7 +37,7 @@ function test_Endpoint:setUp()
         midi.devices[i] =
             midi.devices[i] or {
                 name="midi.connected(" .. i .. ")",
-                send=function (x)
+                send=function (self, x)
                     table.insert(log, "midi.send {" .. table.concat(x, ", ") .. "}")
                 end
             }
@@ -171,7 +171,7 @@ function test_Endpoint:testTransmitNoParamChange()
     )
 
     dev = midi.connect(1)
-    m.port_a.send{7, 8, 9}
+    m.port_a:send{7, 8, 9}
 
     lu.assertEquals(
         self.log,
@@ -202,7 +202,7 @@ function test_Endpoint:testTransmitWithParamChange()
     params.actions.port_a(3)
 
     dev = midi.connect(3)
-    m.port_a.send{7, 8, 9}
+    m.port_a:send{7, 8, 9}
 
     lu.assertEquals(
         self.log,
@@ -233,7 +233,7 @@ function test_ArcGroup:setUp()
         arc.devices[i] =
             arc.devices[i] or {
                 name="arc.connected(" .. i .. ")",
-                led=function (ring, x, val)
+                led=function (self, ring, x, val)
                     table.insert(log, "arc.led {r=" .. ring .. " x=" .. x .. " v=" .. val .. "}")
                 end
             }
@@ -303,7 +303,7 @@ function test_ArcGroup:testTransmitToArc()
         }
     )
 
-    result.arc_port.led(1, 20, 15)
+    result.arc_port:led(1, 20, 15)
 
     lu.assertEquals(
         self.log,
@@ -339,6 +339,130 @@ function test_ArcGroup:testReceiveFromArc()
             'add_option arc_port Arc 4 { "port 1: arc.connected(1)", "port 2: arc.connected(2)" } 1',
             "set_action arc_port",
             "arc callback n=1 d=5"
+        }
+    )
+end
+
+test_GridGroup = { }
+
+function test_GridGroup:setUp()
+    self.log = { }
+    local log = self.log
+
+    --[[
+        Similar to MIDI.
+    ]]
+    grid = { }
+
+    grid.vports = { "...", "..." }
+    grid.devices = { }
+
+    function grid.connect(i)
+        grid.devices[i] =
+            grid.devices[i] or {
+                name="grid.connected(" .. i .. ")",
+                led=function (self, x, y, state)
+                    table.insert(log, "grid.led {x=" .. x .. " y=" .. y .. " state=" .. state .. "}")
+                end
+            }
+        return grid.devices[i]
+    end
+
+    util = { }
+
+    function util.trim_string_to_width(str, w)
+        lu.assertNotNil(str)
+        return str
+    end
+
+    params = { }
+
+    -- TODO: in the docs this is id * label.
+    function params:add_separator(header)
+        table.insert(log, "add_separator " .. header)
+    end
+
+    function params:add_option(id, name, options, default)
+        table.insert(log, "add_option " .. id .. " " .. name .. " " .. inspect.inspect(options) .. " " .. default)
+    end
+
+    function params:set_action(id, callback)
+        table.insert(log, "set_action " .. id)
+
+        self.actions = self.actions or { }
+        self.actions[id] = callback
+    end
+end
+
+function test_GridGroup:tearDown()
+end
+
+function test_GridGroup:testSetup()
+    local result = ports.setup_grids(
+        "GridApp",
+        {
+            grid_port = {
+                name="Grid 4",
+                key=function (x, y, state)
+                    table.insert(self.log, "key x=" .. x .. " y=" .. y .. " state=" .. state)
+                end
+            }
+    })
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator GridApp [grids]",
+            'add_option grid_port Grid 4 { "port 1: grid.connected(1)", "port 2: grid.connected(2)" } 1',
+            "set_action grid_port"
+        }
+    )
+    lu.assertEquals(result._ids, {grid_port=1})
+end
+
+function test_GridGroup:testTransmitToGrid()
+    local result = ports.setup_grids(
+        "GridApp",
+        {
+            grid_port = {name="Grid 4"}
+        }
+    )
+
+    result.grid_port:led(1, 20, 15)
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator GridApp [grids]",
+            'add_option grid_port Grid 4 { "port 1: grid.connected(1)", "port 2: grid.connected(2)" } 1',
+            "set_action grid_port",
+            "grid.led {x=1 y=20 state=15}"
+        }
+    )
+end
+
+function test_GridGroup:testReceiveFromGrid()
+    local result = ports.setup_grids(
+        "GridApp",
+        {
+            grid_port = {
+                name="Grid 4",
+                key=function (x, y, state)
+                    table.insert(self.log, "grid callback x=" .. x .. " y=" .. y .. " state=" .. state)
+                end
+            }
+        }
+    )
+
+    grid.devices[1].key(1, 2, 15)
+
+    lu.assertEquals(
+        self.log,
+        {
+            "add_separator GridApp [grids]",
+            'add_option grid_port Grid 4 { "port 1: grid.connected(1)", "port 2: grid.connected(2)" } 1',
+            "set_action grid_port",
+            "grid callback x=1 y=2 state=15"
         }
     )
 end

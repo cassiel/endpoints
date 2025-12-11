@@ -64,6 +64,7 @@ local function fire_led(key)
 end
 
 local config = {
+    -- MIDI: show on-screen LEDs only:
     midi={
         keys={
             name="Keyboard",
@@ -78,14 +79,25 @@ local config = {
             event=function(_) fire_led("knobs") end
         }
     },
+    -- Grids: we can echo presses to button LEDs.
     grids={
-        gs={
-            name="Greyscale 64",
-            key=function (_, _) fire_led("gs") end
+        m64={
+            name="Grid 64",
+            key=function (_, _, _)
+                fire_led("m64")
+            end
         },
         m128={
             name="Grid 128",
-            key=function (_, _) fire_led("m128") end
+            key=function (x, y, state)
+                fire_led("m128")
+                if endpoints.grids then
+                    print(x, y, state)
+                    endpoints.grids.m128:led(x, y, (state and 15 or 0))
+                else
+                    print("no endpoint")
+                end
+            end
         }
     },
     arcs={ }
@@ -101,7 +113,7 @@ function init()
 
     endpoints.midi = ports.setup_midi("Endpoints", config.midi)
     endpoints.grids = ports.setup_grids("Endpoints", config.grids)
-    endpoints.arcs = ports.setup_grids("Endpoints", config.arcs)
+    endpoints.arcs = ports.setup_arcs("Endpoints", config.arcs)
 
     params:default()        --  Recall default setup.
 end

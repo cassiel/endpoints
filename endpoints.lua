@@ -63,54 +63,65 @@ local function fire_led(key)
     )
 end
 
+--[[
+    Configuration for MIDI input: just flash the
+    on-screen LED blocks.
+]]
+
+local function midi_config(id, name)
+    return {
+        name=name,
+        event=function(_) fire_led(id) end
+    }
+end
+
+--[[
+    Configuration for grids (respond to "key").
+]]
+
+local function grid_config(id, name)
+    return {
+        name=name,
+        key=function (x, y, state)
+            fire_led(id)
+            if endpoints.grids then
+                local dev = endpoints.grids[id]
+                dev:led(x, y, ((state == 1) and 15 or 0))
+                dev:refresh()
+            else
+                print("no endpoint for " .. id)
+            end
+        end
+    }
+end
+
 local config = {
-    -- MIDI: show on-screen LEDs only:
+    --[[
+        For MIDI we have three app-level endpoints for which
+        we're indexing as "keys", "pads" and "knobs". We
+        indicate MIDI activity from them (we aren't
+        yet sending anything in this demo).
+        
+        For grids we have m64 and m128: we respond to presses
+        by lighting the buttons.
+        
+        We have a single arc.
+    ]]
+
     midi={
-        keys={
-            name="Keyboard",
-            event=function(_) fire_led("keys") end
-        },
-        pads={
-            name="Drum Pads",
-            event=function(_) fire_led("pads") end
-        },
-        knobs={
-            name="Controller Box",
-            event=function(_) fire_led("knobs") end
-        }
+        keys=midi_config("keys", "Keyboard"),
+        pads=midi_config("pads", "Drum Pads"),
+        knobs=midi_config("knobs", "Controller Box")
     },
     -- Grids: we can echo presses to button LEDs.
     grids={
-        m64={
-            name="Grid 64",
-            key=function (_, _, _)
-                fire_led("m64")
-            end
-        },
-        m128={
-            name="Grid 128",
-            key=function (x, y, state)
-                fire_led("m128")
-                if endpoints.grids then
-                    print(x, y, state)
-                    endpoints.grids.m128:led(x, y, (state and 15 or 0))
-                else
-                    print("no endpoint")
-                end
-            end
-        }
+        m64=grid_config("m64", "Grid 64"),
+        m128=grid_config("m128", "Grid 128")
     },
     arcs={ }
 }
 
 function init()
-    --[[
-        We have three app-level endpoints for MIDI which
-        we're calling "keys", "pads" and "knobs". We
-        indicate MIDI activity from them (we aren't
-        yet sending anything in this demo).
-    ]]
-
     endpoints.midi = ports.setup_midi("Endpoints", config.midi)
     endpoints.grids = ports.setup_grids("Endpoints", config.grids)
     endpoints.arcs = ports.setup_arcs("Endpoints", config.arcs)

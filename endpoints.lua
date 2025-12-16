@@ -28,7 +28,7 @@ local devGroupNames = {"midi", "grids", "arcs"}     -- See calls in init().
 --[[
     A table which specifies which activity "LEDs"
     are on because of device input. No entry == off.
-    These are across all display pages.
+    These are common across all display pages.
 ]]
 
 local leds_on = { }
@@ -76,7 +76,8 @@ local function midi_config(id, name)
 end
 
 --[[
-    Configuration for grids (respond to "key").
+    Configuration for grids (respond to "key"
+    by lighting on-device LED).
 ]]
 
 local function grid_config(id, name)
@@ -92,6 +93,18 @@ local function grid_config(id, name)
                 print("no endpoint for " .. id)
             end
         end
+    }
+end
+
+--[[
+    Configuration for arc.
+]]
+
+local function arc_config(id, name)
+    return {
+        name=name,
+        delta=function (n, d) fire_led(id) end,
+        key=function (n, z) fire_led(id) end
     }
 end
 
@@ -113,12 +126,13 @@ local config = {
         pads=midi_config("pads", "Drum Pads"),
         knobs=midi_config("knobs", "Controller Box")
     },
-    -- Grids: we can echo presses to button LEDs.
     grids={
         m64=grid_config("m64", "Grid 64"),
         m128=grid_config("m128", "Grid 128")
     },
-    arcs={ }
+    arcs={
+        arc=arc_config("arc", "My Arc")
+    }
 }
 
 function init()
@@ -168,7 +182,7 @@ function redraw()
 
     for i, k in ipairs(sorted_keys(endpoints[groupName])) do
         local v = endpoints[groupName][k]
-        if not k:find("_", 1, true) then
+        if not k:find("_", 1, true) then    -- Ignore "_ids" etc.
             screen.level(led_level(k))
             screen.rect(3, y - 5, 4, 13)
             screen.fill()

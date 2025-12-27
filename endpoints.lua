@@ -1,7 +1,8 @@
 -- ## endpoints
 -- Utility for presenting MIDI,
 -- grid and arc endpoints as
--- params.
+-- script parameters. This is a demo
+-- script to monitor events.
 -- Enc 1 = page (MIDI/Grids/Arcs).
 --
 -- Nick Rothwell, nick@cassiel.com.
@@ -101,10 +102,44 @@ end
 ]]
 
 local function arc_config(id, name)
+    local curr_pos = { }        --  table of current positions 
+    local key_down = { }        --  table of T/F for pressed
+    
+    local function refresh()
+        local dev = endpoints.arcs[id]
+        dev:all(0)
+        
+        for i = 1, 4 do
+            local level = (key_down[i] and 15 or 4)
+            dev:led(i, (curr_pos[i] or 1), level)
+        end
+
+        dev:refresh()
+    end
+    
     return {
         name=name,
-        delta=function (n, d) fire_led(id) end,
-        key=function (n, z) fire_led(id) end
+        delta=function (n, d)
+            fire_led(id)
+            if endpoints.arcs then
+                local p = curr_pos[n] or 1
+                -- Damned Lua 1-base:
+                p = ((p + d - 1) % 64) + 1
+                curr_pos[n] = p
+                refresh()
+            else
+                print("no endpoint for " .. id)
+            end
+        end,
+        key=function (n, z)
+            fire_led(id)
+            if endpoints.arcs then
+                key_down[n] = (z == 1)
+                refresh()
+            else
+                print("no endpoint for " .. id)
+            end
+        end
     }
 end
 
